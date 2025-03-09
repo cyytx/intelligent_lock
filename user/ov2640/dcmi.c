@@ -1,4 +1,3 @@
-
 #include "stdio.h"
 #include "dcmi.h" 
 #include "ov2640.h" 
@@ -256,11 +255,40 @@ void DMA2_Stream1_IRQHandler(void)
 
     if(__HAL_DMA_GET_FLAG(&DMADMCI_Handler,DMA_FLAG_TCIF1_5)!=RESET) // DMA传输完成
     {
+        //停止DCMI采集
+        //  DCMI_Stop();// for test
         __HAL_DMA_CLEAR_FLAG(&DMADMCI_Handler,DMA_FLAG_TCIF1_5); // 清除DMA传输完成中断标志位
+
+        // // //
+        // uint32_t i=0;
+        // uint32_t num = DCMI_BUF_SIZE*2;
+        // uint8_t *pbuf = (uint8_t *)g_dcmi_dma_buf[0];
+        // // 关闭所有中断
+        // __disable_irq();
+        // for(i=0;i<num;i++)
+        // {
+        //     //打十六位就打一个回车换行
+        //     if(i%16==0)
+        //     {
+        //         printf("\r\n");
+        //     }
+        //     printf("0x%02x,", pbuf[i]);
+            
+        // }
+        // printf("\r\n");
+
+        // // 重新开启所有中断
+        // __enable_irq();
         
         // 判断当前使用的缓冲区
+        /*)
+        This bit is set and cleared by hardware. It can also be written by software.
+        0: Current target memory is memory 0 (addressed by the DMA_SxM0AR pointer).
+        1: Current target memory is memory 1 (addressed by the DMA_SxM1AR pointer).
+        */
         //uint8_t current_buffer = (DMA2_Stream1->CR & DMA_SxCR_CT) ? 1 : 0;
         uint8_t current_buffer = (DMA2_Stream1->CR & DMA_SxCR_CT) ? 0 : 1;
+        //printf("%d",current_buffer);
         
         if(dma_transfer_count > 3)
         {
@@ -274,6 +302,7 @@ void DMA2_Stream1_IRQHandler(void)
         uint16_t height = 80;
         // 更新计数器
         dma_transfer_count++;
+        
         // #BUG 目前首先存在DMA大小端和LCD 大小端不同，第二可能还有MSB或LSB不同问题，因为jpeg格式在
         //电脑看也是偏色，需要将buffer,提取出来在电脑做各种转换看是哪种问题，哪一个是正确的。
         LCD_ShowPicture_Async(x, y, width, height, (uint8_t *)g_dcmi_dma_buf[current_buffer]+1);

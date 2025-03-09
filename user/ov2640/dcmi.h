@@ -4,13 +4,20 @@
 #include "stm32f7xx_hal.h"
 #include "lcd_init.h"
 
+#define DCMI_UINT8 0
+#define DCMI_UINT16 1
+
 extern void (*dcmi_rx_callback)(void);//DCMI DMA接收回调函数
 
 extern DCMI_HandleTypeDef DCMI_Handler;        //DCMI句柄
 extern DMA_HandleTypeDef  DMADMCI_Handler;     //DMA句柄
 
 //定义DMA BUFFER,每个buffer为1/4的LCD大小
+#if DCMI_UINT8
+#define DCMI_BUF_SIZE (LCD_W*LCD_H/2)  // 以8位数据为单位的大小
+#else
 #define DCMI_BUF_SIZE (LCD_W*LCD_H/4)  // 以16位数据为单位的大小
+#endif
 
 void DCMI_Init(void);
 void DCMI_DMA_Init(uint32_t mem0addr,uint32_t mem1addr,uint16_t memsize,uint32_t memblen,uint32_t meminc);

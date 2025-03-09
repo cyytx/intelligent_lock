@@ -45,8 +45,9 @@ stm32f7 中断优先级只有0-15总共十六个等级，
 #define TASK_PRIORITY_KEYBOARD          18    /* 按键任务优先级 */
 #define TASK_PRIORITY_DISPLAY           17    /* 显示任务优先级 */
 #define TASK_PRIORITY_NFC               14    /* NFC任务优先级 */
-#define TASK_PRIORITY_FINGERPRINT       15    /* 指纹识别任务优先级 */
+#define TASK_PRIORITY_FINGERPRINT       18    /* 指纹识别任务优先级 */
 #define TASK_PRIORITY_BLE               15    /* 蓝牙任务优先级 */
+
 
 
 /* 任务堆栈大小定义，不能小于configMINIMAL_STACK_SIZE定义的值 目前为128*/

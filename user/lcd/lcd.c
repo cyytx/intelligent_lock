@@ -6,6 +6,7 @@
 #include "lcd.h"
 #include "lcd_pic.h"
 #include "lcd_font.h"  // 字体文件
+#include "dcmi.h"
 #include "priorities.h"
 
 
@@ -726,7 +727,18 @@ void LCD_SHOW_TEST2(void)
     //     }
     // }
     //HAL_Delay(1000);
-    LCD_ShowPicture_Async(0,0,240,320,(uint8_t *)gImage_2);
+    static uint8_t num=0;
+    num ++;
+    if(num%2==1)
+    {
+        DCMI_Stop();
+        LCD_ShowPicture_Async(0,0,240,320,(uint8_t *)my_image);
+    }
+    else
+    {
+        DCMI_Start();
+    }
+    
 }
 
 /******************************************************************************
@@ -792,6 +804,7 @@ void LCD_SHOW(void)
     LCD_ShowString(80,40,(const uint8_t*)"LCD_H:",RED,WHITE,16,0);
     LCD_ShowString(0,70,(const uint8_t*)"Increaseing Nun:",RED,WHITE,16,0);
     HAL_Delay(1000);
+    //LCD_ShowPicture_Async(0,0,240,320,(uint8_t *)my_image);
 }
 
 

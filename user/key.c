@@ -14,6 +14,7 @@
 #include "beep.h"
 #include "sg90.h"
 #include "ble.h"
+#include "fingerprint.h"
 #include "priorities.h"
 
 #if KEY_ENABLE
@@ -445,6 +446,7 @@ void KeyboardScanTask(void *pvParameters)
                 // ClearInputPassword();
                 // setting_password_mode = 0;
                 // enter_press_count = 0;
+                FP_EnrollTest();
             }
             else if (key >= KEY_1 && key <= KEY_0)
             {

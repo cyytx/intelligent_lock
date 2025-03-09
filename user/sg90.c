@@ -9,16 +9,29 @@
 #include "stdio.h"
 #include "stm32f7xx_hal.h"
 #include "cmsis_os.h"
+#include "timers.h"
 #include "sg90.h"
 #include "key.h" // 添加对keyboard.h的引用以访问LockPassword_t类型
 #include "priorities.h"
 
 #ifdef SG90_ENABLE
 
+#define SG90_UNLOCK_TIMEOUT pdMS_TO_TICKS(3000)
+
 /* 私有变量 */
 static TIM_HandleTypeDef sg90_timer;  // 使用定时器2
-
 static uint32_t sg90_channel = TIM_CHANNEL_1;   // 使用通道1
+static uint8_t lock_state = 0;      // 门锁状态
+// 定义队列句柄
+static osMessageQueueId_t sg90QueueHandle;
+static TimerHandle_t SG90_Timer;
+
+osThreadId_t sg90TaskHandle;
+static const osThreadAttr_t sg90_attributes = {
+    .name = "sg90Task",
+    .stack_size = STACK_SIZE_SG90,
+    .priority = (osPriority_t) TASK_PRIORITY_SG90,
+};
 
 
 void SG90_GPIO_Init(void)
@@ -147,55 +160,45 @@ void PG6_SET_LOW(void)
 }   
 
 
-static uint32_t unlock_time = 0;       // 解锁时间
-static uint8_t door_unlocked = 0;      // 门锁状态
+void SG90_TimerCallback(TimerHandle_t xTimer)
+{
+    uint8_t command = LOCK_CMD_CLOSE;
+    osMessageQueuePut(sg90QueueHandle, &command, 0, 0);   
+    printf("SG90_TimerCallback\r\n");
+}
 
-// 添加舵机控制任务相关定义
-osThreadId_t sg90TaskHandle;
-static const osThreadAttr_t sg90_attributes = {
-    .name = "sg90Task",
-    .stack_size = STACK_SIZE_SG90,
-    .priority = (osPriority_t) TASK_PRIORITY_SG90,
-};
 
-// 定义队列句柄
-static osMessageQueueId_t sg90QueueHandle;
-
-// 舵机任务函数
+// 舵机任务函数,用于开关锁
 void Sg90ControlTask(void *pvParameters)
 {
     uint8_t command;
     uint32_t current_time;
+    //创建一个定时器，并启动
+    SG90_Timer = xTimerCreate("SG90_Timer", SG90_UNLOCK_TIMEOUT, pdFALSE, (void *)0, SG90_TimerCallback);
+    xTimerStart(SG90_Timer, 0);
+    xTimerStop(SG90_Timer, 0);
     
     while (1)
     {
         // 本身这里的队列应该是做无限等待的，但是因为要做开锁后自动关锁，所以1s后让它跑到后面是否需要关锁
-        if (osMessageQueueGet(sg90QueueHandle, &command, NULL, pdMS_TO_TICKS(1000)) == osOK)
+        if (osMessageQueueGet(sg90QueueHandle, &command, NULL, portMAX_DELAY) == osOK)
         {
             if (command == LOCK_CMD_OPEN) // 开锁
             {
                 printf("Unlocking door...\r\n");
                 Set_Servo_Angle(180); // 设置舵机角度为180度开锁
-                door_unlocked = 1;
-                unlock_time = osKernelGetTickCount(); // 记录解锁时间
+                xTimerReset(SG90_Timer, 0);
+                 lock_state = 1;
+                // unlock_time = osKernelGetTickCount(); // 记录解锁时间
             }
             else if (command == LOCK_CMD_CLOSE) // 关锁
             {
                 printf("Locking door...\r\n");
                 Set_Servo_Angle(0); // 设置舵机角度为0度关锁
-                door_unlocked = 0;
+                lock_state = 0;
             }
         }
         
-        // 检查是否需要自动关锁
-        if (door_unlocked) {
-            current_time = osKernelGetTickCount();
-            if ((current_time - unlock_time) > pdMS_TO_TICKS(5000)) {
-                printf("Auto locking door after 5s timeout...\r\n");
-                Set_Servo_Angle(0); // 设置舵机角度为0度关锁
-                door_unlocked = 0;
-            }
-        }
     }
 }
 
@@ -204,26 +207,18 @@ void SG90_CreateTask(void)
 {
     // 创建消息队列
     sg90QueueHandle = osMessageQueueNew(10, sizeof(uint8_t), NULL);
+    //创建定时器，用于开锁后自动关锁
     
     // 创建舵机控制任务
     sg90TaskHandle = osThreadNew(Sg90ControlTask, NULL, &sg90_attributes);
 }
 
-// 添加门锁状态获取函数实现
+// // 添加门锁状态获取函数实现
 uint8_t IsDoorUnlocked(void)
 {
-    return door_unlocked;
+    return lock_state;
 }
 
-uint32_t GetUnlockTime(void)
-{
-    return unlock_time;
-}
-
-void ResetUnlockTimer(void)
-{
-    unlock_time = osKernelGetTickCount();
-}
 
 // 发送锁定/解锁命令到舵机任务 1-开锁 0-关锁
 void SendLockCommand(uint8_t command)

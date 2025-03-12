@@ -66,9 +66,9 @@ uint8_t OV2640_Init(void)
     }
 
     /* 初始化 OV2640*/
-    for (i = 0; i < sizeof(ov2640_uxga_init_reg_tbl) / 2; i++)
+    for (i = 0; i < sizeof(ov2640_sxga_init_reg_tbl) / 2; i++)
     {
-        ov2640_write_reg(ov2640_uxga_init_reg_tbl[i][0], ov2640_uxga_init_reg_tbl[i][1]);
+        ov2640_write_reg(ov2640_sxga_init_reg_tbl[i][0], ov2640_sxga_init_reg_tbl[i][1]);
     }
     // //将配置的寄存器全部读出并打印
     // for (i = 0; i < sizeof(ov2640_uxga_init_reg_tbl) / 2; i++)

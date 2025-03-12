@@ -303,9 +303,8 @@ void DMA2_Stream1_IRQHandler(void)
         // 更新计数器
         dma_transfer_count++;
         
-        // #BUG 目前首先存在DMA大小端和LCD 大小端不同，第二可能还有MSB或LSB不同问题，因为jpeg格式在
-        //电脑看也是偏色，需要将buffer,提取出来在电脑做各种转换看是哪种问题，哪一个是正确的。
-        LCD_ShowPicture_Async(x, y, width, height, (uint8_t *)g_dcmi_dma_buf[current_buffer]+1);
+
+        LCD_ShowPicture_Async(x, y, width, height, (uint8_t *)g_dcmi_dma_buf[current_buffer]);
   
     }
 }

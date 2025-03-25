@@ -16,6 +16,7 @@
 #include "ble.h"
 #include "fingerprint.h"
 #include "priorities.h"
+#include "face.h"
 
 #if KEY_ENABLE
 
@@ -446,7 +447,9 @@ void KeyboardScanTask(void *pvParameters)
                 // ClearInputPassword();
                 // setting_password_mode = 0;
                 // enter_press_count = 0;
-                FP_EnrollTest();
+                //FP_EnrollTest();
+                //FACE_Register_Cmd();
+                FACE_Identify_Cmd();
             }
             else if (key >= KEY_1 && key <= KEY_0)
             {

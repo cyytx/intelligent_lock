@@ -60,7 +60,7 @@ void LCD_SHOW_TEST(void);
 void LCD_SHOW(void);
 void LCD_SHOW_TEST2(void);
 void DisplayTask_Create(void);
-void LCD_ShowPicture_Async(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t *pic);
+void LCD_QueueDisplayCommand (uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t *pic);
 #endif
 
 

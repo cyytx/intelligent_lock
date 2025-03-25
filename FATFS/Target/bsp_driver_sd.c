@@ -62,6 +62,9 @@ __weak uint8_t BSP_SD_Init(void)
     if (HAL_SD_ConfigWideBusOperation(&hsd1, SDMMC_BUS_WIDE_4B) != HAL_OK)
     {
       sd_state = MSD_ERROR;
+      printf("HAL_SD_ConfigWideBusOperation failed\r\n");
+    }else{
+      printf("HAL_SD_ConfigWideBusOperation success\r\n");
     }
   }
 
@@ -107,6 +110,8 @@ __weak uint8_t BSP_SD_ReadBlocks(uint32_t *pData, uint32_t ReadAddr, uint32_t Nu
 
   return sd_state;
 }
+
+
 
 /* USER CODE BEGIN BeforeWriteBlocksSection */
 /* can be used to modify previous code / undefine following code / add code */
@@ -244,20 +249,20 @@ void HAL_SD_AbortCallback(SD_HandleTypeDef *hsd)
   * @param hsd: SD handle
   * @retval None
   */
-void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
-{
-  BSP_SD_WriteCpltCallback();
-}
+// void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
+// {
+//   BSP_SD_WriteCpltCallback();
+// }
 
-/**
-  * @brief Rx Transfer completed callback
-  * @param hsd: SD handle
-  * @retval None
-  */
-void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
-{
-  BSP_SD_ReadCpltCallback();
-}
+// /**
+//   * @brief Rx Transfer completed callback
+//   * @param hsd: SD handle
+//   * @retval None
+//   */
+// void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
+// {
+//   BSP_SD_ReadCpltCallback();
+// }
 
 /* USER CODE BEGIN CallBacksSection_C */
 /**

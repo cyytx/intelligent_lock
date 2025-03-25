@@ -13,6 +13,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "diskio.h"
 #include "ff_gen_drv.h"
+#include "sdcard.h"    /* 添加SD卡驱动头文件 */
+//#include "rtc.h"       /* 添加RTC时间头文件，如果有的话 */
 
 #if defined ( __GNUC__ )
 #ifndef __weak
@@ -134,7 +136,13 @@ DRESULT disk_ioctl (
   */
 __weak DWORD get_fattime (void)
 {
-  return 0;
+  /* 如果有RTC，请修改为获取实际时间 */
+  return ((DWORD)(2024 - 1980) << 25)  /* Year 2024 */
+         | ((DWORD)1 << 21)            /* Month 1 */
+         | ((DWORD)1 << 16)            /* Day 1 */
+         | ((DWORD)0 << 11)            /* Hour 0 */
+         | ((DWORD)0 << 5)             /* Min 0 */
+         | ((DWORD)0 >> 1);            /* Sec 0 */
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

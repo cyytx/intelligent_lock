@@ -2,7 +2,7 @@
 #include "ov2640.h"
 #include "ov2640cfg.h"
 #include "lcd_init.h"
-#include "dcmi.h"
+#include "camera.h"
 
 
 /**
@@ -501,37 +501,4 @@ uint8_t ov2640_imagesize_set(uint16_t width, uint16_t height)
     return 0;
 }
 
-#if DCMI_UINT8
-uint8_t g_dcmi_dma_buf[2][DCMI_BUF_SIZE]  __attribute__((aligned(4)));
-#else
-uint16_t g_dcmi_dma_buf[2][DCMI_BUF_SIZE]  __attribute__((aligned(4)));
-#endif
 
-//摄像头显示测试函数
-void OV2640_DISPLAY(void)
-{
-    printf("OV2640_DISPLAY\r\n");
-    
-    ov2640_rgb565_mode();       /* RGB565模式 */
-    
-    // 添加图像质量配置
-     //ov2640_light_mode(0);       // 自动白平衡
-     //ov2640_auto_exposure(0);    // 中等曝光
-    // ov2640_brightness(2);       // 默认亮度
-     //ov2640_contrast(2);         // 默认对比度
-     //ov2640_color_saturation(0); // 默认饱和度
-    
-    DCMI_Init();                /* DCMI配置 */
-    DCMI_DMA_Init((uint32_t)&g_dcmi_dma_buf[0], 
-                  (uint32_t)&g_dcmi_dma_buf[1], 
-                  #if DCMI_UINT8
-                  DCMI_BUF_SIZE/4,  // 因为DCMI是32位，所以这里要除2
-                  #else
-                  DCMI_BUF_SIZE/2,  // 因为DCMI是32位，所以这里要除2
-                  #endif
-                  DMA_MDATAALIGN_HALFWORD, 
-                  DMA_MINC_ENABLE);
-    //DCMI_DMA_Init((uint32_t)&LCD->LCD_RAM, 0, 1, DMA_MDATAALIGN_HALFWORD, DMA_MINC_DISABLE); /* DCMI DMA配置,MCU屏,竖屏 */
-    ov2640_outsize_set(LCD_W, LCD_H);    /* 满屏缩放显示 */
-    DCMI_Start();  
-}

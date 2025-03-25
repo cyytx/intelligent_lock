@@ -33,7 +33,7 @@ extern "C" {
 #define FINGERPRINT_ENABLE 1
 
 /* 人脸识别模块使能控制 */
-#define FACE_ENABLE 0
+#define FACE_ENABLE 1
 
 /* 蓝牙模块使能控制 */
 #define BLE_ENABLE 1
@@ -57,7 +57,7 @@ extern "C" {
 #define DEBUG_UART_ENABLE 1
 
 /* SD卡使能控制 */
-#define SDCARD_ENABLE 0
+#define SDCARD_ENABLE 1
 
 
 #ifdef __cplusplus

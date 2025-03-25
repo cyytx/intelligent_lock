@@ -3,6 +3,7 @@
 #include "ble.h"
 #include "uart.h"
 #include "fingerprint.h"
+#include "face.h"
 
 #if (__ARMCC_VERSION >= 6010050)            /* 使用AC6编译器时 */
  __asm(".global __use_no_semihosting\n\t");  /* 声明不使用半主机模式 */
@@ -29,37 +30,43 @@ void _sys_exit(int x)
 { 
 	x = x; 
 } 
-//重定义fputc函数 
-int fputc(int ch, FILE *f)
-{ 	
-    BaseType_t higher_task_woken = pdFALSE;
-    
-    // 检查是否在中断上下文中
-    if (xPortIsInsideInterrupt() == pdTRUE) {
-        // 在中断中，直接发送，不使用互斥量
-        while((USART1->ISR & 0X40) == 0);
-        USART1->TDR = (uint8_t)ch;
-    } else {
-        // 在任务中，使用互斥量保护
-        if (uart_mutex != NULL) {
-            xSemaphoreTake(uart_mutex, portMAX_DELAY);
-            while((USART1->ISR & 0X40) == 0);
-            USART1->TDR = (uint8_t)ch;
-            xSemaphoreGive(uart_mutex);
-        } else {
-            // 互斥量未创建时直接发送
-            while((USART1->ISR & 0X40) == 0);
-            USART1->TDR = (uint8_t)ch;
-        }
-    }
-    return ch;
+
+// 在uart.c或其他适当的文件中添加
+void _ttywrch(int ch)
+{
+  /* 空实现 */
 }
+//重定义fputc函数 
 // int fputc(int ch, FILE *f)
 // { 	
-// 	while((USART1->ISR&0X40)==0);//循环发送,直到发送完毕   
-// 	USART1->TDR=(uint8_t)ch;      
-// 	return ch;
+//     BaseType_t higher_task_woken = pdFALSE;
+    
+//     // 检查是否在中断上下文中
+//     if (xPortIsInsideInterrupt() == pdTRUE) {
+//         // 在中断中，直接发送，不使用互斥量
+//         while((USART1->ISR & 0X40) == 0);
+//         USART1->TDR = (uint8_t)ch;
+//     } else {
+//         // 在任务中，使用互斥量保护
+//         if (uart_mutex != NULL) {
+//             xSemaphoreTake(uart_mutex, portMAX_DELAY);
+//             while((USART1->ISR & 0X40) == 0);
+//             USART1->TDR = (uint8_t)ch;
+//             xSemaphoreGive(uart_mutex);
+//         } else {
+//             // 互斥量未创建时直接发送
+//             while((USART1->ISR & 0X40) == 0);
+//             USART1->TDR = (uint8_t)ch;
+//         }
+//     }
+//     return ch;
 // }
+int fputc(int ch, FILE *f)
+{ 	
+	while((USART1->ISR&0X40)==0);//循环发送,直到发送完毕   
+	USART1->TDR=(uint8_t)ch;      
+	return ch;
+}
 
 // UART 句柄
  UART_HandleTypeDef huart1;
@@ -77,7 +84,7 @@ void UART_Init(void)
 {
     /* 配置 UART 参数 */
     huart1.Instance = USART1;
-    huart1.Init.BaudRate = 115200;
+    huart1.Init.BaudRate = 921600;
     huart1.Init.WordLength = UART_WORDLENGTH_8B;
     huart1.Init.StopBits = UART_STOPBITS_1;
     huart1.Init.Parity = UART_PARITY_NONE;
@@ -129,7 +136,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     else if (huart->Instance == UART5)
     {
         /* UART5接收完成处理 - 人脸识别模块 */
-        // FaceRecog_RxCpltCallback();
+        FACE_RxCpltCallback();
     }
     else if (huart->Instance == USART6)
     {

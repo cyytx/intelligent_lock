@@ -36,11 +36,13 @@ extern char SDPath[4]; /* SD logical drive path */
 extern FATFS SDFatFS; /* File system object for SD logical drive */
 extern FIL SDFile; /* File object for SD */
 
-void MX_FATFS_Init(void);
-
-/* USER CODE BEGIN Prototypes */
-
-/* USER CODE END Prototypes */
+/* 导出函数 */
+FRESULT FATFS_Init(void);
+FRESULT FATFS_WriteTestFile(void);
+FRESULT FATFS_ReadTestFile(void);
+FRESULT FATFS_ListDirectory(const char *path);
+FRESULT FATFS_CreateDirectory(const char *path);
+FRESULT FATFS_GetDiskInfo(void);
 #ifdef __cplusplus
 }
 #endif

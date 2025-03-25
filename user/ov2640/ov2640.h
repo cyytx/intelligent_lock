@@ -155,7 +155,7 @@ uint8_t ov2640_imagesize_set(uint16_t width, uint16_t height);
 void ov2640_flash_extctrl(uint8_t sw);
 void ov2640_flash_intctrl(void);
 
-void OV2640_DISPLAY(void);
+void CAMERA_Display(void);
 
 #endif
 

@@ -174,7 +174,6 @@ uint8_t FP_AtCmdCheck(uint8_t *data, uint16_t length)
         data[length-1] = checksum&0xFF;
         
     }
-    printf("checksum:%d,original_checksum:%d,data[length-2]:%d,data[length-1]:%d\r\n",checksum,original_checksum,data[length-2],data[length-1]);
     return 0;
 }
 
@@ -592,15 +591,16 @@ void Fingerprint_RxCpltCallback(void)
     if(FP_Timer != NULL)
     {
         xTimerResetFromISR(FP_Timer, &xHigherPriorityTaskWoken);
+        HAL_UART_Receive_IT(&huart4, FP_RxTempBuffer, 1);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
     else
     {
         FP_RxIndex = 0;
         printf("rtos not start:%x\r\n",FP_RxTempBuffer[0]);
+         HAL_UART_Receive_IT(&huart4, FP_RxTempBuffer, 1);
     }
-        // 继续接收数据
-    HAL_UART_Receive_IT(&huart4, FP_RxTempBuffer, 1);
+   
 }
 
 /**

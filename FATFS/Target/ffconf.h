@@ -83,7 +83,8 @@
 / Locale and Namespace Configurations
 /-----------------------------------------------------------------------------*/
 
-#define _CODE_PAGE         850
+//#define _CODE_PAGE         850
+#define _CODE_PAGE         437
 /* This option specifies the OEM code page to be used on the target system.
 /  Incorrect setting of the code page can cause a file open failure.
 /
@@ -111,7 +112,16 @@
 /   950 - Traditional Chinese (DBCS)
 */
 
-#define _USE_LFN     0    /* 0 to 3 */
+/*
+FAT 文件系统最初只支持 8.3 格式的短文件名（即最多 8 个字符的文件名和最多 3 个字符的扩展名），但通过启用 LFN 功能，可以支持更长的文件名。
+_USE_LFN 的取值及其含义：
+
+    0：禁用长文件名功能。只支持 8.3 格式的短文件名。
+    1：启用长文件名功能，但不支持创建长文件名。可以读取和访问已有的长文件名，但无法创建新的长文件名。
+    2：启用长文件名功能，并支持创建长文件名。
+    3：启用长文件名功能，并支持创建长文件名，同时在文件名冲突时自动生成短文件名
+*/
+#define _USE_LFN     2    /* 0 to 3 */
 #define _MAX_LFN     255  /* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN switches the support of long file name (LFN).
 /

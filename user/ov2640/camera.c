@@ -1,17 +1,19 @@
 #include "stdio.h"
-#include "dcmi.h" 
+#include "camera.h" 
 #include "ov2640.h" 
 #include "lcd_init.h"
 #include "lcd.h"
 #include "priorities.h"
 
-extern uint16_t g_dcmi_dma_buf[2][DCMI_BUF_SIZE];
 	
 DCMI_HandleTypeDef  DCMI_Handler;           //DCMI句柄
 DMA_HandleTypeDef   DMADMCI_Handler;        //DMA句柄
 
-// 定义全局计数器
-volatile uint8_t dma_transfer_count = 0;
+#if DCMI_UINT8
+uint8_t g_dcmi_dma_buf[2][DCMI_BUF_SIZE]  __attribute__((aligned(4)));
+#else
+uint16_t g_dcmi_dma_buf[2][DCMI_BUF_SIZE]  __attribute__((aligned(4)));
+#endif
 
 /* JPEG尺寸支持列表 */
 const uint16_t jpeg_img_size_tbl[][2] =
@@ -128,9 +130,8 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 //mem0addr:存储器地址0  将要存储摄像头数据的内存地址(也可以是外设地址)
 //mem1addr:存储器地址1  当只使用mem0addr的时候,该值必须为0
 //memsize:存储器大小,如果是一帧的话就是rgb16bit 则大小设置为IMG_WIDTH*IMG_HEIGHT在DMA_MDATAALIGN_HALFWORD时
-//memblen:存储器位宽,可以为:DMA_MDATAALIGN_BYTE/DMA_MDATAALIGN_HALFWORD/DMA_MDATAALIGN_WORD
 //meminc:存储器增长方式,可以为:DMA_MINC_ENABLE/DMA_MINC_DISABLE
-void DCMI_DMA_Init(uint32_t mem0addr,uint32_t mem1addr,uint16_t memsize,uint32_t memblen,uint32_t meminc)
+void DCMI_DMA_Init(uint32_t mem0addr,uint32_t mem1addr,uint16_t memsize,uint32_t meminc)
 { 
     __HAL_RCC_DMA2_CLK_ENABLE();                                    //使能DMA2时钟
     __HAL_LINKDMA(&DCMI_Handler,DMA_Handle,DMADMCI_Handler);        //将DMA与DCMI联系起来
@@ -173,7 +174,7 @@ void DCMI_DMA_Init(uint32_t mem0addr,uint32_t mem1addr,uint16_t memsize,uint32_t
 }
 
 //DCMI,启动传输 
-void DCMI_Start(void)
+void CAMERA_Start(void)
 {  
     LCD_Address_Set(0,0,LCD_W-1,LCD_H-1);  // 假设是320x240分辨率，根据实际情况调整
     __HAL_DMA_ENABLE(&DMADMCI_Handler); //使能DMA
@@ -181,39 +182,57 @@ void DCMI_Start(void)
 }
 
 //DCMI,关闭传输
-void DCMI_Stop(void)
+void CAMERA_Stop(void)
 { 
     DCMI->CR&=~(DCMI_CR_CAPTURE);       //关闭捕获
     while(DCMI->CR&0X01);               //等待传输完成
     __HAL_DMA_DISABLE(&DMADMCI_Handler);//关闭DMA
 } 
 
-// //RGB屏数据接收回调函数
-// void rgblcd_dcmi_rx_callback(void)
-// {  
-// 	u16 *pbuf;
-// 	if(DMA2_Stream1->CR&(1<<19))//DMA使用buf1,读取buf0
-// 	{ 
-// 		pbuf=(u16*)dcmi_line_buf[0]; 
-// 	}else 						//DMA使用buf0,读取buf1
-// 	{
-// 		pbuf=(u16*)dcmi_line_buf[1]; 
-// 	} 	
-// 	LTDC_Color_Fill(0,curline,lcddev.width-1,curline,pbuf);//DM2D填充 
-// 	if(curline<lcddev.height)curline++;
-// }
+
+
+//摄像头显示测试函数
+void CAMERA_Display(void)
+{
+    printf("CAMERA_Display\r\n");
+    
+    ov2640_rgb565_mode();       /* RGB565模式 */
+    
+    // 添加图像质量配置
+     //ov2640_light_mode(0);       // 自动白平衡
+     //ov2640_auto_exposure(0);    // 中等曝光
+    // ov2640_brightness(2);       // 默认亮度
+     //ov2640_contrast(2);         // 默认对比度
+     //ov2640_color_saturation(0); // 默认饱和度
+    
+    DCMI_Init();                /* DCMI配置 */
+    DCMI_DMA_Init((uint32_t)&g_dcmi_dma_buf[0], 
+                  (uint32_t)&g_dcmi_dma_buf[1], 
+                  #if DCMI_UINT8
+                  DCMI_BUF_SIZE/4,  // 因为DCMI是32位，所以这里要除4
+                  #else
+                  DCMI_BUF_SIZE/2,  // 因为DCMI是32位，所以这里要除2
+                  #endif
+                  DMA_MINC_ENABLE);
+    ov2640_outsize_set(LCD_W, LCD_H);    /* 满屏缩放显示 */
+    CAMERA_Start();  
+}
+
+
 //DCMI中断服务函数
 void DCMI_IRQHandler(void)
 {
     uint32_t isr = DCMI->MISR; // 获取DCMI中断状态寄存器值
-    
-    // printf("DCMI ISR: 0x%x ", isr);
-    // if(isr & DCMI_MIS_FRAME_MIS) printf("FRAME ");
-    // if(isr & DCMI_MIS_OVR_MIS) printf("OVR ");
-    // if(isr & DCMI_MIS_ERR_MIS) printf("ERR ");
-    // if(isr & DCMI_MIS_VSYNC_MIS) printf("VSYNC ");
-    // if(isr & DCMI_MIS_LINE_MIS) printf("LINE ");
-    // printf("\r\n");
+    //如果不是帧中断则打印
+    if((isr & DCMI_MIS_FRAME_MIS ) == 0)
+    {
+        printf("DCMI ISR: 0x%x ", isr);
+        if(isr & DCMI_MIS_OVR_MIS) printf("OVR ");
+        if(isr & DCMI_MIS_ERR_MIS) printf("ERR ");
+        if(isr & DCMI_MIS_VSYNC_MIS) printf("VSYNC ");
+        if(isr & DCMI_MIS_LINE_MIS) printf("LINE ");
+        printf("\r\n");
+    }
     
     HAL_DCMI_IRQHandler(&DCMI_Handler);
 }
@@ -227,18 +246,10 @@ void DCMI_IRQHandler(void)
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
    
-    //printf("2\r\n");
-    //printf("Frame Complete: 0x%x\r\n", DCMI->CR);
     //重新使能帧中断,因为HAL_DCMI_IRQHandler()函数会关闭帧中断
-    dma_transfer_count = 0;
-    //printf("0x%d\r\n", dma_transfer_count);
     __HAL_DCMI_ENABLE_IT(&DCMI_Handler,DCMI_IT_FRAME);
 }
 
-// void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
-// {
-//     printf("VSYNC Event\r\n");
-// }
 
 void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
 {
@@ -256,32 +267,10 @@ void DMA2_Stream1_IRQHandler(void)
     if(__HAL_DMA_GET_FLAG(&DMADMCI_Handler,DMA_FLAG_TCIF1_5)!=RESET) // DMA传输完成
     {
         //停止DCMI采集
-        //  DCMI_Stop();// for test
+        //  CAMERA_Stop();// for test
         __HAL_DMA_CLEAR_FLAG(&DMADMCI_Handler,DMA_FLAG_TCIF1_5); // 清除DMA传输完成中断标志位
 
-        // // //
-        // uint32_t i=0;
-        // uint32_t num = DCMI_BUF_SIZE*2;
-        // uint8_t *pbuf = (uint8_t *)g_dcmi_dma_buf[0];
-        // // 关闭所有中断
-        // __disable_irq();
-        // for(i=0;i<num;i++)
-        // {
-        //     //打十六位就打一个回车换行
-        //     if(i%16==0)
-        //     {
-        //         printf("\r\n");
-        //     }
-        //     printf("0x%02x,", pbuf[i]);
-            
-        // }
-        // printf("\r\n");
-
-        // // 重新开启所有中断
-        // __enable_irq();
-        
-        // 判断当前使用的缓冲区
-        /*)
+        /*
         This bit is set and cleared by hardware. It can also be written by software.
         0: Current target memory is memory 0 (addressed by the DMA_SxM0AR pointer).
         1: Current target memory is memory 1 (addressed by the DMA_SxM1AR pointer).
@@ -290,21 +279,11 @@ void DMA2_Stream1_IRQHandler(void)
         uint8_t current_buffer = (DMA2_Stream1->CR & DMA_SxCR_CT) ? 0 : 1;
         //printf("%d",current_buffer);
         
-        if(dma_transfer_count > 3)
-        {
-            return;
-        }
-        // 根据计数器值设置显示位置
-        //printf("0x%d\r\n", dma_transfer_count);
         uint16_t x = 0;
-        uint16_t y = dma_transfer_count *80;
+        uint16_t y = 0;
         uint16_t width = LCD_W;
-        uint16_t height = 80;
-        // 更新计数器
-        dma_transfer_count++;
-        
-
-        LCD_ShowPicture_Async(x, y, width, height, (uint8_t *)g_dcmi_dma_buf[current_buffer]);
+        uint16_t height = LCD_H;
+        LCD_QueueDisplayCommand (x, y, width, height, (uint8_t *)g_dcmi_dma_buf[current_buffer]);
   
     }
 }

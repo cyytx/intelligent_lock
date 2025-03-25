@@ -37,11 +37,16 @@
 #include "nfc.h"
 #include "delay.h"
 #include "ble.h"
-
+#include "sdcard.h"
+#include "fatfs.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
+static void Main_Task(void *argument);
+
+/* 定义main_task的任务句柄 */
+osThreadId_t mainTaskHandle;
 
 /**
   * @brief  The application entry point.
@@ -59,14 +64,45 @@ int main(void)
 
     /* Configure the system clock */
     SystemClock_Config();
+    
+    /* 初始化RTOS内核 */
+    osKernelInitialize();
+    
+    /* 创建main_task */
+    const osThreadAttr_t mainTask_attributes = {
+      .name = "MainTask",
+      .stack_size = 4096,
+      .priority = (osPriority_t) osPriorityHigh
+    };
+    mainTaskHandle = osThreadNew(Main_Task, NULL, &mainTask_attributes);
+    
+    /* 启动调度器 */
+    osKernelStart();
 
-    /* Initialize all configured peripherals */
+    /* 永远不会到达这里 */
+    while (1)
+    {
+    }
+}
+
+/**
+  * @brief  主任务函数，用于初始化外设和创建其他任务
+  * @param  argument: 未使用
+  * @retval None
+  */
+static void Main_Task(void *argument)
+{
     UART_Init();
+    printf("System starting, performing initialization in Main_Task...\r\n");
+    
+    /* 初始化基本延时函数 */
     delay_init(96);
+    
+    /* 初始化各个外设 */
     LED_Init();
     LCD_Init();
     LCD_SHOW();
-
+    
     KEY_Init();//锁密码也在里面读出
     BEEP_Init();
     SG90_Init();
@@ -74,17 +110,31 @@ int main(void)
     
     NFC_Init();
     BLE_Init();
+    
     OV2640_Init();
-    OV2640_DISPLAY();
-
-    osKernelInitialize();
+    CAMERA_Display();
+    FACE_Init();
+    SDCARD1_Init();
+    
+    // // /* 初始化FATFS文件系统 */
+    if (FATFS_Init() == FR_OK)
+    {
+        /* 测试FATFS读写功能 */
+        FATFS_GetDiskInfo();                    /* 获取SD卡容量信息 */
+        FATFS_CreateDirectory("0:/FATS_SDIR_LAOCAO");  /* 创建测试目录 */
+        FATFS_WriteTestFile();                  /* 写入测试文件 */
+        FATFS_ReadTestFile();                   /* 读取测试文件 */
+        FATFS_ListDirectory("0:/");             /* 列出根目录内容 */
+    }
+    
     /* 在这里初始化UART互斥量 */
     UART_Mutex_Init();
-    /* 创建 LED 任务 */
+    
+
     LedTask_Create();
-    
+
+    /* 创建蓝牙任务 */
     BLE_CreateTask();
-    
     /* 创建键盘任务 */
     KEY_CreateTask();
 
@@ -100,16 +150,26 @@ int main(void)
     /* 创建指纹任务 */
     FP_CreateTask();
 
-    /* Start scheduler */
-     osKernelStart();
-
-    while (1)
-    {
-        /* USER CODE END WHILE */
-
-        /* USER CODE BEGIN 3 */
-    }
-    /* USER CODE END 3 */
+    /* 创建人脸识别任务 */
+    FACE_CreateTask();
+    
+    printf("All initializations and task creations completed.\r\n");
+    
+    /* 打印Main_Task的栈使用情况，它返回的是剩余栈大小，单位是word */
+    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+    /* CMSIS-RTOS中设置的2048是字节数，内部会除以sizeof(StackType_t)转为栈单位 */
+    UBaseType_t totalStackUnits = 2048 / sizeof(StackType_t);
+    printf("Main_Task stack high water mark: %lu units\r\n", (unsigned long)uxHighWaterMark);
+    printf("Main_Task total stack: %u bytes (%u units), used: %lu units (%lu bytes) (%.2f%%)\r\n", 
+            2048, 
+            (unsigned int)totalStackUnits,
+            (unsigned long)(totalStackUnits - uxHighWaterMark),
+            (unsigned long)(totalStackUnits - uxHighWaterMark) * sizeof(StackType_t),
+            (float)(totalStackUnits - uxHighWaterMark) * 100.0f / totalStackUnits);
+    
+    /* 所有初始化和任务创建完成，删除main_task */
+    printf("Main_Task deleting itself...\r\n");
+    osThreadTerminate(mainTaskHandle);
 }
 
 /**

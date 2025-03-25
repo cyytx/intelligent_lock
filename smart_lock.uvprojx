@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F767xx</Define>
               <Undefine></Undefine>
-              <IncludePath>./Core/Inc;./FATFS/Target;./FATFS/App;./LIBJPEG/App;./LIBJPEG/Target;./Drivers/STM32F7xx_HAL_Driver/Inc;./Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;./Middlewares/Third_Party/FreeRTOS/Source/include;./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;./Middlewares/Third_Party/FatFs/src;./Middlewares/Third_Party/LibJPEG/include;./Drivers/CMSIS/Device/ST/STM32F7xx/Include;./Drivers/CMSIS/Include;.\user;.\user\ov2640;.\user\lcd</IncludePath>
+              <IncludePath>./Core/Inc;./FATFS/Target;./FATFS/App;./LIBJPEG/App;./LIBJPEG/Target;./Drivers/STM32F7xx_HAL_Driver/Inc;./Drivers/STM32F7xx_HAL_Driver/Inc/Legacy;./Middlewares/Third_Party/FreeRTOS/Source/include;./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1;./Middlewares/Third_Party/FatFs/src;./Middlewares/Third_Party/LibJPEG/include;./Drivers/CMSIS/Device/ST/STM32F7xx/Include;./Drivers/CMSIS/Include;.\user;.\user\ov2640;.\user\lcd;.\FATFS\App;.\FATFS\Target;.\Middlewares\Third_Party\FatFs\src</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -512,6 +512,16 @@
               <FileType>1</FileType>
               <FilePath>.\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_flash_ex.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f7xx_hal_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_hal_sd.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f7xx_ll_sdmmc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Drivers\STM32F7xx_HAL_Driver\Src\stm32f7xx_ll_sdmmc.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -593,11 +603,6 @@
               <FilePath>.\user\uart.c</FilePath>
             </File>
             <File>
-              <FileName>dcmi.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\ov2640\dcmi.c</FilePath>
-            </File>
-            <File>
               <FileName>ov2640.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\ov2640\ov2640.c</FilePath>
@@ -638,11 +643,6 @@
               <FilePath>.\user\delay.c</FilePath>
             </File>
             <File>
-              <FileName>fingerprint.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\user\fingerprint.c</FilePath>
-            </File>
-            <File>
               <FileName>lcd.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\lcd\lcd.c</FilePath>
@@ -651,6 +651,71 @@
               <FileName>lcd_init.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\lcd\lcd_init.c</FilePath>
+            </File>
+            <File>
+              <FileName>fingerprint.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\fingerprint.c</FilePath>
+            </File>
+            <File>
+              <FileName>face.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\face.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\sdcard.c</FilePath>
+            </File>
+            <File>
+              <FileName>camera.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\ov2640\camera.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>fatfs</GroupName>
+          <Files>
+            <File>
+              <FileName>sd_diskio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\FATFS\Target\sd_diskio.c</FilePath>
+            </File>
+            <File>
+              <FileName>diskio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Middlewares\Third_Party\FatFs\src\diskio.c</FilePath>
+            </File>
+            <File>
+              <FileName>ff.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Middlewares\Third_Party\FatFs\src\ff.c</FilePath>
+            </File>
+            <File>
+              <FileName>ff_gen_drv.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Middlewares\Third_Party\FatFs\src\ff_gen_drv.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_driver_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\FATFS\Target\bsp_driver_sd.c</FilePath>
+            </File>
+            <File>
+              <FileName>syscall.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Middlewares\Third_Party\FatFs\src\option\syscall.c</FilePath>
+            </File>
+            <File>
+              <FileName>fatfs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\FATFS\App\fatfs.c</FilePath>
+            </File>
+            <File>
+              <FileName>unicode.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Middlewares\Third_Party\FatFs\src\option\unicode.c</FilePath>
             </File>
           </Files>
         </Group>

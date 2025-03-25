@@ -25,7 +25,7 @@ stm32f7 中断优先级只有0-15总共十六个等级，
 #define OV2640_IRQ_PRIORITY_DMA_DCMI        7    /* DCMI中断优先级（摄像头） */
 #define FINGERPRINT_IRQ_PRIORITY_USART4     7    /* 指纹串口中断优先级 */
 #define FINGERPRINT_IRQ_PRIORITY_EXTI       6    /* 指纹外部中断优先级 */
-
+#define FACE_IRQ_PRIORITY_USART5            7    /* 人脸串口中断优先级 */
 
 /**
  * @注意：FreeRTOS任务优先级规则
@@ -47,6 +47,7 @@ stm32f7 中断优先级只有0-15总共十六个等级，
 #define TASK_PRIORITY_NFC               14    /* NFC任务优先级 */
 #define TASK_PRIORITY_FINGERPRINT       18    /* 指纹识别任务优先级 */
 #define TASK_PRIORITY_BLE               15    /* 蓝牙任务优先级 */
+#define TASK_PRIORITY_FACE              16    /* 人脸识别任务优先级 */
 
 
 

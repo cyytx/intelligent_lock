@@ -6,7 +6,7 @@
 #include "lcd.h"
 #include "lcd_pic.h"
 #include "lcd_font.h"  // 字体文件
-#include "dcmi.h"
+#include "camera.h"
 #include "priorities.h"
 
 
@@ -548,33 +548,6 @@ void LCD_ShowFloatNum1(uint16_t x,uint16_t y,float num,uint8_t len,uint16_t fc,u
 	}
 }
 
-
-/******************************************************************************
-      函数说明：显示图片
-      入口数据：x,y起点坐标
-                length 图片长度
-                width  图片宽度
-                pic[]  图片数组    
-      返回值：  无
-******************************************************************************/
-
-
-
-/* 异步DMA传输函数
- * 参数：data - 要传输的数据指针
- *       size - 数据大小（字节） */
-void DMA_SPI_Transmit_Async(uint8_t *data, uint16_t size)
-{
-    // 检查前次传输是否完成
-    if(g_dma_transfer_in_progress) return;
-    
-    // 设置传输标志
-    g_dma_transfer_in_progress = 1;
-    
-    // 启动DMA传输（hspi2为全局SPI句柄）
-    HAL_SPI_Transmit_DMA(&hspi2, data, size);
-}
-
 /* SPI传输完成回调函数，该函数实际是在HAL_DMA_IRQHandler中调用，所以要使用中断安全的API
  * 参数：hspi - SPI句柄指针 */
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
@@ -593,26 +566,6 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
-/* 启动异步传输内部函数
- * 计算剩余数据量并分块传输 */
-static void vStartAsyncTransfer(void)
-{
-    uint32_t remaining = xDisplayParams.width * xDisplayParams.height * 2;
-    remaining -= xDisplayParams.transferred;
-    
-    // 确定本次传输块大小（最大65534字节，DMA限制）
-    uint16_t chunk_size = (remaining > 65534) ? 65534 : remaining;
-    
-    // 启动异步传输（偏移已传输字节数）
-    DMA_SPI_Transmit_Async(
-        (uint8_t*)(xDisplayParams.pic + xDisplayParams.transferred),
-        chunk_size
-    );
-    
-    // 更新已传输字节数
-    xDisplayParams.transferred += chunk_size;
-}
-
 
 
 /* 显示任务主函数
@@ -621,6 +574,8 @@ void vDisplayTask(void *pvParameters)
 {
     DisplayCommand cmd;
     const TickType_t xDMATimeout = pdMS_TO_TICKS(1000);  // 1秒超时
+    uint32_t data_sum=0;
+    uint16_t send_data_num=0;
     
     while(1) {
         // 阻塞等待显示命令（portMAX_DELAY表示无限等待）
@@ -637,23 +592,30 @@ void vDisplayTask(void *pvParameters)
             LCD_Address_Set(cmd.x, cmd.y, 
                           cmd.x + cmd.width - 1, 
                           cmd.y + cmd.height - 1);
+
+            ulTaskNotifyTake(pdTRUE, 0);//清除最后一次发送的通知
             
-            // 启动首次传输
-            vStartAsyncTransfer();
+            data_sum = (cmd.width - cmd.x) * (cmd.height - cmd.y)*2;
+            send_data_num = (data_sum - xDisplayParams.transferred)>65534?65534:data_sum - xDisplayParams.transferred;
+            g_dma_transfer_in_progress = 1;
+            HAL_SPI_Transmit_DMA(&hspi2,(uint8_t *)(xDisplayParams.pic + xDisplayParams.transferred ),send_data_num);
+            xDisplayParams.transferred += send_data_num;
+
             
             // 循环等待所有块传输完成
-            while(xDisplayParams.transferred < (cmd.width * cmd.height * 2)) {
+            while(xDisplayParams.transferred < data_sum) {
                 // 添加超时检测
-                if(ulTaskNotifyTake(pdTRUE, xDMATimeout) == 0) {
-                    // 超时处理
+                if(ulTaskNotifyTake(pdTRUE, xDMATimeout)) {
+                    //printf("%d\r\n",xDisplayParams.transferred);
+                    send_data_num = (data_sum - xDisplayParams.transferred)>65534?65534:data_sum - xDisplayParams.transferred;
+                    HAL_SPI_Transmit_DMA(&hspi2,(uint8_t *)(xDisplayParams.pic + xDisplayParams.transferred ),send_data_num);
+                    xDisplayParams.transferred += send_data_num;
+                } else  {
+                      // 超时处理
                     printf("DMA transfer timeout!\r\n");
                     g_dma_transfer_in_progress = 0;  // 重置DMA状态
                     // 可以在这里添加重试逻辑或错误处理
                     break;
-                }
-                
-                if(xDisplayParams.transferred < (cmd.width * cmd.height * 2)) {
-                    vStartAsyncTransfer();  // 继续传输下一块
                 }
             }
         }
@@ -682,7 +644,7 @@ void DisplayTask_Create(void)
  * 参数：x,y - 显示位置
  *       width,height - 图片尺寸
  *       pic - 图片数据指针（需保持有效直到传输完成） */
-void LCD_ShowPicture_Async(uint16_t x, uint16_t y, 
+void LCD_QueueDisplayCommand (uint16_t x, uint16_t y, 
                           uint16_t width, uint16_t height,
                           uint8_t *pic)
 {
@@ -718,25 +680,17 @@ void LCD_ShowPicture_Async(uint16_t x, uint16_t y,
 
 void LCD_SHOW_TEST2(void)
 {
-    // uint8_t i,j;
-    // for(j=0;j<5;j++)
-    // {
-    //     for(i=0;i<6;i++)
-    //     {
-    //         LCD_ShowPicture_Async(40*i,120+j*40,40,40,gImage_1);
-    //     }
-    // }
-    //HAL_Delay(1000);
+
     static uint8_t num=0;
     num ++;
     if(num%2==1)
     {
-        DCMI_Stop();
-        LCD_ShowPicture_Async(0,0,240,320,(uint8_t *)my_image);
+        CAMERA_Stop();
+        LCD_QueueDisplayCommand (0,0,240,320,(uint8_t *)my_image);
     }
     else
     {
-        DCMI_Start();
+        CAMERA_Start();
     }
     
 }
@@ -804,7 +758,7 @@ void LCD_SHOW(void)
     LCD_ShowString(80,40,(const uint8_t*)"LCD_H:",RED,WHITE,16,0);
     LCD_ShowString(0,70,(const uint8_t*)"Increaseing Nun:",RED,WHITE,16,0);
     HAL_Delay(1000);
-    //LCD_ShowPicture_Async(0,0,240,320,(uint8_t *)my_image);
+    //LCD_QueueDisplayCommand (0,0,240,320,(uint8_t *)my_image);
 }
 
 
